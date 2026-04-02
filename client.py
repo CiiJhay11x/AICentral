@@ -1,9 +1,10 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import requests
 import socket
 import threading
 import time
+import socketio
 
 # Get server IP (broadcast or hardcode)
 def get_server_ip():
@@ -22,6 +23,16 @@ class PiSonetClient:
         self.active = False
         self.timer_id = None
         self.time_left = 0
+
+        # SocketIO for real-time coin detection
+        self.sio = socketio.Client()
+        self.sio.on('coin_detected', self.on_coin_detected)
+        try:
+            self.sio.connect(f"http://{SERVER_IP}")
+            print("Connected to server via SocketIO")
+        except:
+            print("Failed to connect to server")
+
         self.create_lock_screen()
 
         # Emergency close (trial)
@@ -30,15 +41,41 @@ class PiSonetClient:
         # Admin panel
         self.root.bind("<F10>", lambda e: self.show_admin())
 
+    def on_coin_detected(self):
+        print("Coin detected via SocketIO")
+        self.time_left = 60
+        self.show_done_button()
+
     def create_lock_screen(self):
         print("Creating lock screen...")
         self.clear_screen()
-        self.lock_frame = tk.Frame(self.root)
-        self.lock_frame.pack(expand=True)
-
-        tk.Label(self.lock_frame, text="PiSonet Computer Locked", font=("Arial", 24)).pack(pady=20)
-        self.push_btn = tk.Button(self.lock_frame, text="Press to Enable Coin Insert", font=("Arial", 16), command=self.start_countdown)
+        
+        # Main frame with padding
+        self.lock_frame = ttk.Frame(self.root, padding="20")
+        self.lock_frame.pack(expand=True, fill='both')
+        
+        # Title
+        title_label = ttk.Label(self.lock_frame, text="🔒 PiSonet Computer Locked", 
+                               font=("Segoe UI", 28, "bold"), foreground="#2c3e50")
+        title_label.pack(pady=(50, 30))
+        
+        # Subtitle
+        subtitle_label = ttk.Label(self.lock_frame, text="Insert coin to unlock computer access", 
+                                  font=("Segoe UI", 14), foreground="#7f8c8d")
+        subtitle_label.pack(pady=(0, 40))
+        
+        # Insert coin button
+        style = ttk.Style()
+        style.configure("Coin.TButton", font=("Segoe UI", 16, "bold"), 
+                       padding=20, background="#27ae60", foreground="white")
+        self.push_btn = ttk.Button(self.lock_frame, text="🪙 INSERT COIN", 
+                                  style="Coin.TButton", command=self.start_countdown)
         self.push_btn.pack(pady=20)
+        
+        # Status label
+        self.status_label = ttk.Label(self.lock_frame, text="", 
+                                     font=("Segoe UI", 12), foreground="#e74c3c")
+        self.status_label.pack(pady=10)
 
         # Emergency close button (trial)
         self.close_btn = tk.Button(self.root, text="X", font=("Arial", 14), bg="red", fg="white", command=self.emergency_close)
@@ -49,14 +86,15 @@ class PiSonetClient:
 
     def start_countdown(self):
         self.active = True
-        self.push_btn.config(state=tk.DISABLED)
+        self.push_btn.config(state='disabled')
+        self.status_label.config(text="⏳ Enabling coin slot... Please insert coin within 60 seconds", foreground="#f39c12")
         self.time_left = 60  # Default
         self.update_countdown()
 
         # Enable coinslot via server
         self.send_command("enable_relay")
 
-        # Listen for coin
+        # Listen for coin (fallback)
         self.check_coin()
 
     def update_countdown(self):
@@ -64,8 +102,13 @@ class PiSonetClient:
             self.end_session()
             return
 
-        self.lock_frame.children.get("timer_label", tk.Label()).destroy()
-        tk.Label(self.lock_frame, text=f"Time Left: {self.time_left}s", font=("Arial", 20), name="timer_label").pack()
+        # Remove previous timer label if exists
+        if hasattr(self, 'timer_label'):
+            self.timer_label.destroy()
+        
+        self.timer_label = ttk.Label(self.lock_frame, text=f"⏰ Time Left: {self.time_left}s", 
+                                    font=("Segoe UI", 18, "bold"), foreground="#e74c3c")
+        self.timer_label.pack(pady=10)
 
         self.timer_id = self.root.after(1000, self.decrement_timer)
 
@@ -84,7 +127,13 @@ class PiSonetClient:
         self.root.after(500, self.check_coin)
 
     def show_done_button(self):
-        tk.Button(self.lock_frame, text="DONE PAYING", font=("Arial", 16), command=self.unlock_screen).pack(pady=10)
+        self.status_label.config(text="✅ Coin detected! Click DONE to unlock", foreground="#27ae60")
+        style = ttk.Style()
+        style.configure("Done.TButton", font=("Segoe UI", 14, "bold"), 
+                       padding=10, background="#3498db", foreground="white")
+        self.done_btn = ttk.Button(self.lock_frame, text="✅ DONE PAYING", 
+                                  style="Done.TButton", command=self.unlock_screen)
+        self.done_btn.pack(pady=10)
 
     def cancel_countdown(self):
         self.root.after_cancel(self.timer_id)

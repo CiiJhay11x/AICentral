@@ -122,6 +122,12 @@ def manage_client(client_id):
             client['timer_thread'].join(timeout=1)
         client['timer_thread'] = threading.Thread(target=upward_timer, args=(client_id,))
         client['timer_thread'].start()
+    elif action == 'enable_relay':
+        GPIO.output(RELAY_PIN, GPIO.HIGH)  # Enable coinslot
+        print("Relay enabled via client command")
+    elif action == 'disable_relay':
+        GPIO.output(RELAY_PIN, GPIO.LOW)  # Disable coinslot
+        print("Relay disabled via client command")
 
     with open('clients.json', 'w') as f:
         json.dump(clients, f)
