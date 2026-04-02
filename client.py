@@ -30,7 +30,7 @@ class PiSonetClient:
         self.root = root
         self.root.title("PiSonet Client")
         self.root.geometry("800x600")
-        self.root.attributes('-fullscreen', True)
+        # self.root.attributes('-fullscreen', True)  # Commented out for debugging
         self.active = False
         self.timer_id = None
         self.time_left = 0
@@ -43,6 +43,7 @@ class PiSonetClient:
         self.root.bind("<F10>", lambda e: self.show_admin())
 
     def create_lock_screen(self):
+        print("Creating lock screen...")
         self.clear_screen()
         self.lock_frame = tk.Frame(self.root)
         self.lock_frame.pack(expand=True)
@@ -171,6 +172,8 @@ class PiSonetClient:
         pass
 
 if __name__ == "__main__":
+    print("Starting PiSonet Client...")
     root = tk.Tk()
     app = PiSonetClient(root)
+    print("Client initialized, starting main loop...")
     root.mainloop()
