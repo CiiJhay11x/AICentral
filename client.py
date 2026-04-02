@@ -128,8 +128,7 @@ class PiSonetClient:
         # Enable coinslot via server
         self.send_command("enable_relay")
 
-        # Listen for coin (fallback)
-        self.check_coin()
+        # Coin detection via SocketIO
 
     def update_countdown(self):
         if self.time_left <= 0:
@@ -212,10 +211,12 @@ class PiSonetClient:
         pass
 
     def send_command(self, cmd):
+        print(f"Sending command: {cmd}")
         try:
-            requests.post(f"http://{SERVER_IP}/api/client/{CLIENT_ID}", json={"action": cmd})
-        except:
-            pass
+            response = requests.post(f"http://{SERVER_IP}/api/client/{CLIENT_ID}", json={"action": cmd})
+            print(f"Command response: {response.status_code}")
+        except Exception as e:
+            print(f"Failed to send command: {e}")
 
     def clear_screen(self):
         for widget in self.root.winfo_children():
