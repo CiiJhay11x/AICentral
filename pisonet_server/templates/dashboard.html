@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PiSonet Dashboard</title>
+  <style>
+    body { font-family: Arial; }
+    .client { border: 1px solid #ccc; padding: 10px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Clients</h2>
+  <div id="clients">
+    {% for cid, c in clients.items() %}
+    <div class="client" id="client-{{ cid }}">
+      <h3>{{ c.name }}</h3>
+      <p>Time Left: {{ c.time_left // 60 }} mins</p>
+      <button onclick="addTime('{{ cid }}', 10)">+10m</button>
+      <button onclick="addTime('{{ cid }}', 60)">+60m</button>
+      <button onclick="bypass('{{ cid }}')">Bypass Open</button>
+      <button onclick="setName('{{ cid }}')">Rename</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>Timer Rates (minutes)</h2>
+  <form id="rates-form">
+    {% for k, v in rates.items() %}
+    {{ k }}: <input type="number" name="{{ k }}" value="{{ v // 60 }}"> <br>
+    {% endfor %}
+    <button type="button" onclick="saveRates()">Save</button>
+  </form>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    function addTime(cid, mins) {
+      fetch(`/api/client/${cid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_time', value: mins })
+      }).then(() => location.reload());
+    }
+
+    function bypass(cid) {
+      fetch(`/api/client/${cid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bypass_open' })
+      }).then(() => location.reload());
+    }
+
+    function setName(cid) {
+      const name = prompt('Enter new name:');
+      if (name) {
+        fetch(`/api/client/${cid}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set_name', value: name })
+        }).then(() => location.reload());
+      }
+    }
+
+    function saveRates() {
+      const data = {};
+      document.querySelectorAll('#rates-form input').forEach(inp => {
+        data[inp.name] = inp.value;
+      });
+      fetch('/api/update_rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(() => alert('Rates saved!'));
+    }
+
+    socket.on('timer_update', data => {
+      const el = document.getElementById(`client-${data.client_id}`);
+      if (el) {
+        el.innerHTML += `<p>Played: ${Math.floor(data.time_used/60)}m | Tier: ${data.price_key} (${data.price/60}m rate)</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
