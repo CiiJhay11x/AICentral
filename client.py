@@ -14,7 +14,7 @@ def get_server_ip():
     s.close()
     # Try common Pisone IPs
     for i in range(1, 255):
-        test_ip = f"{'.'.join(ip.split('.')[:-1])}.{i}:5000"
+        test_ip = f"{'.'.join(ip.split('.')[:-1])}.{i}:8080"
         try:
             requests.get(f"http://{test_ip}/", timeout=0.5)
             return test_ip.split(':')[0]
@@ -22,7 +22,7 @@ def get_server_ip():
             continue
     return None
 
-SERVER_IP = get_server_ip() or "192.168.1.100:5000"
+SERVER_IP = get_server_ip() or "192.168.1.100:8080"
 CLIENT_ID = socket.gethostname()[:8]
 
 class PiSonetClient:
