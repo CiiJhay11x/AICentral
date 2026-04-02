@@ -37,7 +37,7 @@ This project implements a coin-operated computer network system using an Orange 
    python3 app.py
    ```
 
-3. **On Client PCs**:
+3. **On Client PCs** (Windows/Linux with GUI):
    ```bash
    # Clone or download client.py
    git clone https://github.com/CiiJhay11x/AICentral.git
@@ -49,6 +49,8 @@ This project implements a coin-operated computer network system using an Orange 
    # Run the client
    python client.py
    ```
+
+   **Note**: Client requires a graphical desktop environment. Does not run on headless servers.
 
 ## Detailed Installation Guide
 
