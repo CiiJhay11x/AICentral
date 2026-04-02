@@ -7,20 +7,8 @@ import time
 
 # Get server IP (broadcast or hardcode)
 def get_server_ip():
-    # Simple: assume same subnet
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
-    # Try common Pisone IPs
-    for i in range(1, 255):
-        test_ip = f"{'.'.join(ip.split('.')[:-1])}.{i}:8080"
-        try:
-            requests.get(f"http://{test_ip}/", timeout=0.5)
-            return test_ip.split(':')[0]
-        except:
-            continue
-    return None
+    # For now, skip scanning to speed up
+    return None  # Will use hardcoded IP
 
 SERVER_IP = get_server_ip() or "192.168.1.100:8080"
 CLIENT_ID = socket.gethostname()[:8]

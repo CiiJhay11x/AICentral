@@ -17,13 +17,13 @@ login_manager.login_view = 'login'
 
 # GPIO Setup
 COIN_PIN = 3    # Physical Pin 5
-RELAY_PIN = 5   # Physical Pin 29 (LOW = ON)
+RELAY_PIN = 5   # Physical Pin 29 (HIGH = ON, assuming active high relay)
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)  # Disable GPIO warnings
 GPIO.setup(COIN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Coin switch (active low)
 GPIO.setup(RELAY_PIN, GPIO.OUT)
-GPIO.output(RELAY_PIN, GPIO.HIGH)  # Relay OFF by default
+GPIO.output(RELAY_PIN, GPIO.LOW)  # Relay OFF by default (assuming active high)
 
 # Global Data
 clients = {}  # client_id -> {name, time_left, rate_map, timer_thread, active}
@@ -150,13 +150,17 @@ def upward_timer(client_id):
 # Coin Detection & Relay Control
 def coin_detection_loop():
     while True:
-        if GPIO.input(COIN_PIN) == GPIO.LOW:  # Coin inserted
-            GPIO.output(RELAY_PIN, GPIO.LOW)  # Enable coinslot
+        coin_state = GPIO.input(COIN_PIN)
+        print(f"Coin pin state: {coin_state}")
+        if coin_state == GPIO.LOW:  # Coin inserted
+            GPIO.output(RELAY_PIN, GPIO.HIGH)  # Enable coinslot (active high)
+            print("Relay set to HIGH (enable)")
             # Notify all clients
             socketio.emit('coin_detected')
             time.sleep(1)  # Debounce
         else:
-            GPIO.output(RELAY_PIN, GPIO.HIGH)  # Disable coinslot
+            GPIO.output(RELAY_PIN, GPIO.LOW)  # Disable coinslot (active high)
+            print("Relay set to LOW (disable)")
         time.sleep(0.1)
 
 @socketio.on('connect')
