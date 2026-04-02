@@ -20,6 +20,7 @@ COIN_PIN = 3    # Physical Pin 5
 RELAY_PIN = 5   # Physical Pin 29 (LOW = ON)
 
 GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)  # Disable GPIO warnings
 GPIO.setup(COIN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Coin switch (active low)
 GPIO.setup(RELAY_PIN, GPIO.OUT)
 GPIO.output(RELAY_PIN, GPIO.HIGH)  # Relay OFF by default
@@ -44,12 +45,13 @@ if os.path.exists('rates.json'):
 
 # User Model
 class User(UserMixin):
-    pass
+    def __init__(self, id):
+        self.id = id
 
 @login_manager.user_loader
 def load_user(user_id):
     if user_id == 'admin':
-        return User()
+        return User(user_id)
     return None
 
 # Login Route
@@ -59,7 +61,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         if username == 'admin' and password == 'admin':
-            user = User()
+            user = User('admin')
             login_user(user)
             return redirect(url_for('dashboard'))
         return 'Invalid credentials'
