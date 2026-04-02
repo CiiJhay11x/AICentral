@@ -5,6 +5,8 @@ import socket
 import threading
 import time
 import socketio
+from PIL import Image, ImageTk
+import os
 
 # Get server IP (broadcast or hardcode)
 def get_server_ip():
@@ -24,6 +26,10 @@ class PiSonetClient:
         self.timer_id = None
         self.time_left = 0
 
+        # Download and set background image
+        self.bg_image = None
+        self.load_background()
+
         # SocketIO for real-time coin detection
         self.sio = socketio.Client()
         self.sio.on('coin_detected', self.on_coin_detected)
@@ -41,6 +47,29 @@ class PiSonetClient:
         # Admin panel
         self.root.bind("<F10>", lambda e: self.show_admin())
 
+    def load_background(self):
+        bg_url = "https://static.vecteezy.com/system/resources/previews/023/165/669/large_2x/game-background-with-magic-maya-altar-in-jungle-free-vector.jpg"
+        bg_path = "background.jpg"
+        if not os.path.exists(bg_path):
+            try:
+                response = requests.get(bg_url)
+                with open(bg_path, 'wb') as f:
+                    f.write(response.content)
+                print("Background image downloaded")
+            except:
+                print("Failed to download background image")
+                return
+        
+        try:
+            img = Image.open(bg_path)
+            img = img.resize((800, 600), Image.Resampling.LANCZOS)
+            self.bg_image = ImageTk.PhotoImage(img)
+            self.bg_label = tk.Label(self.root, image=self.bg_image)
+            self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+            self.bg_label.lower()  # Send to back
+        except:
+            print("Failed to load background image")
+
     def on_coin_detected(self):
         print("Coin detected via SocketIO")
         self.time_left = 60
@@ -50,32 +79,37 @@ class PiSonetClient:
         print("Creating lock screen...")
         self.clear_screen()
         
-        # Main frame with padding
-        self.lock_frame = ttk.Frame(self.root, padding="20")
-        self.lock_frame.pack(expand=True, fill='both')
+        # Create a canvas for the overlay with transparency effect
+        self.canvas = tk.Canvas(self.root, width=800, height=600, highlightthickness=0)
+        self.canvas.pack(fill='both', expand=True)
+        
+        # Semi-transparent overlay
+        self.canvas.create_rectangle(0, 0, 800, 600, fill='#000000', stipple='gray50', outline='')
+        
+        # Main content frame on canvas
+        self.lock_frame = tk.Frame(self.canvas, bg='#ffffff', bd=2, relief='raised')
+        self.canvas.create_window(400, 300, window=self.lock_frame, anchor='center')
         
         # Title
-        title_label = ttk.Label(self.lock_frame, text="🔒 PiSonet Computer Locked", 
-                               font=("Segoe UI", 28, "bold"), foreground="#2c3e50")
-        title_label.pack(pady=(50, 30))
+        title_label = tk.Label(self.lock_frame, text="🔒 PiSonet Computer Locked", 
+                              font=("Segoe UI", 28, "bold"), bg='#ffffff', fg="#2c3e50")
+        title_label.pack(pady=(20, 10))
         
         # Subtitle
-        subtitle_label = ttk.Label(self.lock_frame, text="Insert coin to unlock computer access", 
-                                  font=("Segoe UI", 14), foreground="#7f8c8d")
-        subtitle_label.pack(pady=(0, 40))
+        subtitle_label = tk.Label(self.lock_frame, text="Insert coin to unlock computer access", 
+                                 font=("Segoe UI", 14), bg='#ffffff', fg="#7f8c8d")
+        subtitle_label.pack(pady=(0, 20))
         
         # Insert coin button
-        style = ttk.Style()
-        style.configure("Coin.TButton", font=("Segoe UI", 16, "bold"), 
-                       padding=20, background="#27ae60", foreground="white")
-        self.push_btn = ttk.Button(self.lock_frame, text="🪙 INSERT COIN", 
-                                  style="Coin.TButton", command=self.start_countdown)
-        self.push_btn.pack(pady=20)
+        self.push_btn = tk.Button(self.lock_frame, text="🪙 INSERT COIN", 
+                                 font=("Segoe UI", 16, "bold"), bg="#27ae60", fg="white", 
+                                 padx=20, pady=10, command=self.start_countdown)
+        self.push_btn.pack(pady=10)
         
         # Status label
-        self.status_label = ttk.Label(self.lock_frame, text="", 
-                                     font=("Segoe UI", 12), foreground="#e74c3c")
-        self.status_label.pack(pady=10)
+        self.status_label = tk.Label(self.lock_frame, text="", 
+                                    font=("Segoe UI", 12), bg='#ffffff', fg="#e74c3c")
+        self.status_label.pack(pady=5)
 
         # Emergency close button (trial)
         self.close_btn = tk.Button(self.root, text="X", font=("Arial", 14), bg="red", fg="white", command=self.emergency_close)
@@ -106,9 +140,9 @@ class PiSonetClient:
         if hasattr(self, 'timer_label'):
             self.timer_label.destroy()
         
-        self.timer_label = ttk.Label(self.lock_frame, text=f"⏰ Time Left: {self.time_left}s", 
-                                    font=("Segoe UI", 18, "bold"), foreground="#e74c3c")
-        self.timer_label.pack(pady=10)
+        self.timer_label = tk.Label(self.lock_frame, text=f"⏰ Time Left: {self.time_left}s", 
+                                   font=("Segoe UI", 18, "bold"), bg='#ffffff', fg="#e74c3c")
+        self.timer_label.pack(pady=5)
 
         self.timer_id = self.root.after(1000, self.decrement_timer)
 
@@ -127,13 +161,11 @@ class PiSonetClient:
         self.root.after(500, self.check_coin)
 
     def show_done_button(self):
-        self.status_label.config(text="✅ Coin detected! Click DONE to unlock", foreground="#27ae60")
-        style = ttk.Style()
-        style.configure("Done.TButton", font=("Segoe UI", 14, "bold"), 
-                       padding=10, background="#3498db", foreground="white")
-        self.done_btn = ttk.Button(self.lock_frame, text="✅ DONE PAYING", 
-                                  style="Done.TButton", command=self.unlock_screen)
-        self.done_btn.pack(pady=10)
+        self.status_label.config(text="✅ Coin detected! Click DONE to unlock", fg="#27ae60")
+        self.done_btn = tk.Button(self.lock_frame, text="✅ DONE PAYING", 
+                                 font=("Segoe UI", 14, "bold"), bg="#3498db", fg="white", 
+                                 padx=10, pady=5, command=self.unlock_screen)
+        self.done_btn.pack(pady=5)
 
     def cancel_countdown(self):
         self.root.after_cancel(self.timer_id)
@@ -187,7 +219,12 @@ class PiSonetClient:
 
     def clear_screen(self):
         for widget in self.root.winfo_children():
-            widget.destroy()
+            if widget != self.bg_label:  # Keep background
+                widget.destroy()
+        # Recreate background if needed
+        if hasattr(self, 'bg_label') and self.bg_label.winfo_exists():
+            self.bg_label.lift()  # Bring to front? No, background should be back
+            self.bg_label.lower()
 
     def emergency_close(self):
         if messagebox.askyesno("Emergency", "Close PiSonet Client?"):

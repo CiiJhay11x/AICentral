@@ -16,10 +16,9 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # GPIO Setup
-COIN_PIN = 3    # Physical Pin 5
-RELAY_PIN = 5   # Physical Pin 29 (HIGH = ON, assuming active high relay)
-
-GPIO.setmode(GPIO.BOARD)
+COIN_PIN = 2    # GPIO2 for coin signal
+RELAY_PIN = 3   # GPIO3 for relay
+GPIO.setmode(GPIO.BCM)  # Use BCM numbering
 GPIO.setwarnings(False)  # Disable GPIO warnings
 GPIO.setup(COIN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Coin switch (active low)
 GPIO.setup(RELAY_PIN, GPIO.OUT)

@@ -44,7 +44,7 @@ This project implements a coin-operated computer network system using an Orange 
    cd AICentral
 
    # Install required packages (if not already installed)
-   pip install requests python-socketio --break-system-packages
+   pip install requests python-socketio pillow --break-system-packages
 
    # Run the client
    python client.py
